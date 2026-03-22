@@ -2,6 +2,11 @@
 
 ## v0.23.0 (TBD)
 
+#### Fixes
+
+- Eliminated unsound `unsafe` double-drop UB in `Program::write_to_file` and `Library::write_to_file`: replaced `unsafe { core::ptr::read(&*err) }` with safe `*err` (deref-move from `Box<io::Error>`); added regression tests for both ([#2840](https://github.com/0xMiden/miden-vm/pull/2840)).
+
+
 ## 0.22.0 (2025-03-18)
 
 #### Enhancements

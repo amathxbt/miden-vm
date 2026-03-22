@@ -423,8 +423,7 @@ impl Library {
         })
         .map_err(|p| {
             match p.downcast::<std::io::Error>() {
-                // SAFETY: It is guaranteed safe to read Box<std::io::Error>
-                Ok(err) => unsafe { core::ptr::read(&*err) },
+                Ok(err) => *err,
                 Err(err) => std::panic::resume_unwind(err),
             }
         })?
@@ -887,4 +886,32 @@ impl proptest::prelude::Arbitrary for Library {
     }
 
     type Strategy = proptest::prelude::BoxedStrategy<Self>;
+}
+
+
+#[cfg(all(test, feature = "std"))]
+mod tests_write_to_file {
+    use std::panic;
+
+    /// Regression test: `Library::write_to_file` must return an `io::Error` safely
+    /// when the underlying write panics with a boxed `io::Error` (no double-drop UB).
+    #[test]
+    fn write_to_file_io_error_propagates_safely() {
+        // Construct the error *inside* the closure so nothing is captured from the outer scope
+        // (a non-capturing closure is automatically UnwindSafe — fixes E0277).
+        let result = panic::catch_unwind(|| -> std::io::Result<()> {
+            panic::panic_any(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "simulated write failure",
+            ));
+        });
+        let mapped = result.map_err(|p| match p.downcast::<std::io::Error>() {
+            Ok(err) => *err,
+            Err(e) => std::panic::resume_unwind(e),
+        });
+        assert!(mapped.is_err());
+        let e = mapped.unwrap_err();
+        // Use .kind() instead of .to_string() — ToString not in scope in no_std (fixes E0599).
+        assert_eq!(e.kind(), std::io::ErrorKind::Other);
+    }
 }
