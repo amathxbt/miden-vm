@@ -117,7 +117,7 @@ fn unused_private_constant_emits_warning() {
         "
 const UNUSED_MAGIC = 42
 
-export.foo
+pub proc foo
     push.1
 end
 ",
@@ -154,7 +154,7 @@ fn used_private_constant_does_not_warn() {
             "
 const STACK_DEPTH = 16
 
-export.foo
+pub proc foo
     push.STACK_DEPTH
 end
 ",
@@ -191,7 +191,7 @@ fn underscore_prefixed_constant_still_warns() {
         "
 const _RESERVED = 0
 
-export.foo
+pub proc foo
     push.1
 end
 ",
